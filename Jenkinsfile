@@ -119,10 +119,8 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'kubectl apply -f deployment.yaml'
-                sh 'kubectl apply -f service.yaml'
-                // If using Ingress
-                sh 'kubectl apply -f ingress.yaml'
+                kubernetesDeploy(configs: "deployment.yaml", 
+                                         "service.yaml")
             }
         }
 
