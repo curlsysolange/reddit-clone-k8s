@@ -131,7 +131,7 @@ stage('Containerization Deployment') {
                         def podName = pod.split('/')[1]
                         
                         // Get list of containers in the pod
-                        def containers = sh(script: "kubectl get pod -n $namespace $podName -o=jsonpath='{range .spec.containers[*]}{.name}{"\n"}{end}'", returnStdout: true).trim().split('\n')
+                        def containers = sh(script: "kubectl get pod -n $namespace $podName -o=jsonpath='{range .spec.containers[*]}{.name}{\"\\n\"}{end}'", returnStdout: true).trim().split('\n')
                         
                         // Iterate over each container in the pod
                         for (container in containers) {
