@@ -22,8 +22,7 @@ stage('Checkout'){
 stage('SonarQube Analysis'){
     steps{
         withSonarQubeEnv('sonar-server') {
-                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-k8s 
-                    -Dsonar.projectKey=reddit-clone-k8s"
+                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=reddit-clone-k8s -Dsonar.projectKey=reddit-clone-k8s"
     }
 }
 }
