@@ -16,7 +16,7 @@ stages{
 }
 stage('Checkout'){
     steps{
-        git branch: 'main' url: 'https://github.com/curlsysolange/reddit-clone-k8s.git'
+        git branch: 'main', url: 'https://github.com/curlsysolange/reddit-clone-k8s.git'
     }
 }
 stage('SonarQube Analysis'){
