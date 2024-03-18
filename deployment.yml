@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: reddit-clone
-        image:curlsysolange/reddit-clone-k8s:latest
+        image: curlsysolange/reddit-clone-k8s:latest
         ports:
         - containerPort: 3000
 
