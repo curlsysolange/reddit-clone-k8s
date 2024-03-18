@@ -22,7 +22,7 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/curlsysolange/reddit-clone-k8s.git'
             }
         }
-
+        
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -30,7 +30,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Quality Gate') {
             steps {
                 script {
@@ -38,13 +38,20 @@ pipeline {
                 }
             }
         }
-
+        
         stage('NPM') {
             steps {
                 sh 'npm install'
             }
         }
-
+      /*
+        stage('OWASP FILE SCAN') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit --nvdApiKey 4bdf4acc-8eae-45c1-bfc4-844d549be812', odcInstallation: 'DP'
+                dependencyCheckPublisher pattern: '**
+            }
+        }
+      */
         stage('Trivy File Scan') {
             steps {
                 script {
@@ -52,7 +59,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Login to DockerHUB') {
             steps {
                 script {
@@ -61,14 +68,7 @@ pipeline {
                 }
             }
         }
-
-        stage('Security Testing') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit --nvdApiKey 4bdf4acc-8eae-45c1-bfc4-844d549be812', odcInstallation: 'DP'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
-
+        
         stage('Docker Build') {
             steps {
                 script {
@@ -77,14 +77,7 @@ pipeline {
                 }
             }
         }
-
-        stage('OWASP FILE SCAN') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit --nvdApiKey 4bdf4acc-8eae-45c1-bfc4-844d549be812', odcInstallation: 'DP'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
-
+        
         stage('Docker Push') {
             steps {
                 script {
@@ -93,7 +86,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Trivy Image Scan') {
             steps {
                 script {
@@ -102,7 +95,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Containerization Deployment') {
             steps {
                 script {
@@ -116,40 +109,24 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy') {
+        
+      stage('Deploy to Kubernetes') {
             steps {
-                kubernetesDeploy(configs: "deployment.yaml", 
-                                         "service.yaml")
-            }
-        }
-
-        stage('Scan Kubernetes Cluster') {
-            steps {
-                script {                    
-                    // Get list of pods in the cluster
-                    def pods = sh(script: 'kubectl get pods --all-namespaces -o=jsonpath="{range .items[*]}{.metadata.namespace}/{.metadata.name}{"\\n"}{end}"', returnStdout: true).trim().split('\n')
-                    
-                    // Iterate over each pod
-                    for (pod in pods) {
-                        def namespace = pod.split('/')[0]
-                        def podName = pod.split('/')[1]
-                        
-                        // Get list of containers in the pod
-                        def containers = sh(script: "kubectl get pod -n $namespace $podName -o=jsonpath='{range .spec.containers[*]}{.name}{\"\\n\"}{end}'", returnStdout: true).trim().split('\n')
-                        
-                        // Iterate over each container in the pod
-                        for (container in containers) {
-                            // Get container image name
-                            def image = sh(script: "kubectl get pod -n $namespace $podName -o=jsonpath=\"{.spec.containers[?(@.name=='$container')].image}\"", returnStdout: true).trim()
-                            
-                            // Run Trivy to scan the image
-                            echo "Scanning image $image in pod $podName in namespace $namespace"
-                            sh "trivy image -n --severity HIGH,MEDIUM $image"
-                        }
-                    }
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    sh 'kubectl apply -f deployment.yml'
+                    sh 'kubectl apply -f service.yml'
                 }
             }
+      }
+        stage('cluster Scan') {
+            steps {
+                script {
+                    // Run Trivy vulnerability scan on your container images
+                    sh 'trivy image --format=json reddit-clone-k8s:latest > vulnerabilities.json'
+                }
+                // Publish the results as an artifact
+                archiveArtifacts artifacts: 'vulnerabilities.json', onlyIfSuccessful: false
+            }
         }
-    }
+   }
 }
